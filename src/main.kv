@@ -1,0 +1,149 @@
+#: kivy 1.10.1
+
+# demo user select screen
+<DemoUserSelScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        Button:
+            size_hint: (1, .1)
+            text: 'Select demo user'
+            color: (0, 1, 1, .8)
+        DemoUserSelView:
+            size_hint: (1, .9)
+
+# user card screen
+<UserCardScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            size_hint: (1, .1)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Pre'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'screen1'
+            Button:
+                id: l_user_name
+                size_hint: (.6, 1)
+                text: '****'
+                color: (0, 1, 1, .8)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Next'
+        TabbedPanel:
+            size_hint: (1, .9)
+            do_default_tab: False
+            TabbedPanelItem:
+                text: 'Address'
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: (1, 1)
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'Address'
+                    TextInput:
+                        size_hint: (1, .4)
+                        id: ti_address
+                        text: '***'
+                        readonly: True
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'Pubkey'
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, .4)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_pubkey
+                            text: '***'
+                            readonly: True
+            TabbedPanelItem:
+                text: 'RSA'
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: (1, 1)
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, 1)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_rsa_prikey
+                            readonly: True
+                            text: '***'
+            TabbedPanelItem:
+                text: 'ECC'
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: (1, 1)
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'Prikey'
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, .4)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_ecc_prikey
+                            text: '***'
+                            readonly: True
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'Pubkey'
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, .4)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_ecc_pubkey
+                            text: '***'
+                            readonly: True
+            TabbedPanelItem:
+                text: 'AES'
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: (1, 1)
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'Key'
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, .4)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_aes_key
+                            text: '***'
+                            readonly: True
+                    Label:
+                        size_hint: (1, .1)
+                        text: 'IV'
+                    ScrollView:
+                        id: scrlv
+                        size_hint: (1, .4)
+                        TextInput:
+                            size_hint: 1, None
+                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            id: ti_aes_iv
+                            text: '***'
+                            readonly: True
+            TabbedPanelItem:
+                text: 'Conf'
+                BoxLayout:
+                    BoxLayout:
+                        size_hint: (1, .1)
+                        Button:
+                            size_hint: (.6, 1)
+                            text: 'Font Size'
+                        Button:
+                            size_hint: (.2, 1)
+                            text: '+'
+                        Button:
+                            size_hint: (.2, 1)
+                            text: '-'
+
+

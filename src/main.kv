@@ -31,6 +31,7 @@
             Button:
                 size_hint: (.2, 1)
                 text: 'Next'
+                on_press: root.show_contact_screen()
         TabbedPanel:
             size_hint: (1, .9)
             do_default_tab: False
@@ -46,6 +47,7 @@
                         size_hint: (1, .4)
                         id: ti_address
                         text: '***'
+                        font_size: root.default_size * 2
                         readonly: True
                     Label:
                         size_hint: (1, .1)
@@ -55,9 +57,10 @@
                         size_hint: (1, .4)
                         TextInput:
                             size_hint: 1, None
-                            height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
+                            height: max((len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_pubkey
                             text: '***'
+                            font_size: root.default_size
                             readonly: True
             TabbedPanelItem:
                 text: 'RSA'
@@ -72,7 +75,9 @@
                             height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_rsa_prikey
                             readonly: True
+                            allow_copy: False
                             text: '***'
+                            font_size: root.default_size
             TabbedPanelItem:
                 text: 'ECC'
                 BoxLayout:
@@ -89,7 +94,9 @@
                             height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_ecc_prikey
                             text: '***'
+                            font_size: root.default_size
                             readonly: True
+                            allow_copy: False
                     Label:
                         size_hint: (1, .1)
                         text: 'Pubkey'
@@ -101,7 +108,9 @@
                             height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_ecc_pubkey
                             text: '***'
+                            font_size: root.default_size
                             readonly: True
+                            allow_copy: False
             TabbedPanelItem:
                 text: 'AES'
                 BoxLayout:
@@ -118,7 +127,9 @@
                             height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_aes_key
                             text: '***'
+                            font_size: root.default_size
                             readonly: True
+                            allow_copy: False
                     Label:
                         size_hint: (1, .1)
                         text: 'IV'
@@ -130,7 +141,9 @@
                             height: max( (len(self._lines)+1) * self.line_height, scrlv.height)
                             id: ti_aes_iv
                             text: '***'
+                            font_size: root.default_size
                             readonly: True
+                            allow_copy: False
             TabbedPanelItem:
                 text: 'Conf'
                 BoxLayout:
@@ -142,8 +155,158 @@
                         Button:
                             size_hint: (.2, 1)
                             text: '+'
+                            on_press: root.font_size = root.font_size + 2
                         Button:
                             size_hint: (.2, 1)
                             text: '-'
+                            on_press: root.font_size = root.font_size - 2
 
+# contact screen
+<ContactScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: 10
+        BoxLayout:
+            size_hint: (1, .1)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Home'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'screen2'
+            Button:
+                id: l_contact
+                size_hint: (.6, 1)
+                text: 'Contact List'
+                color: (0, 1, 1, .8)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Msg'
+                on_press:
+                    root.manager.transition.direction = 'left'
+                    root.manager.current = 'screen4'
+        ContactView:
+            id: sv_contact
+            size_hint: (1, .9)
+
+<ContactLayout>:
+    size_hint_y: None
+    height: root.width/5
+    Button:
+        id: btn_name
+        text: root.name
+        size_hint: (None, None)
+        height: root.width/5
+        width: root.width/5
+        font_size: root.default_size*2
+        halign: 'center'
+        valign: 'middle'
+        on_press: root.show_send_message_box()
+    BoxLayout:
+        size_hint: (1, 1)
+        orientation: 'vertical'
+        Button:
+            id: btn_address
+            text: root.address
+            size_hint: (1, .2)
+            font_size: root.default_size + 6
+            halign: 'left'
+            valign: 'middle'
+        Button:
+            id: btn_pubkey
+            text: root.pubkey
+            size_hint: (1, .8)
+            font_size: root.default_size
+            halign: 'left'
+            valign: 'middle'
+
+# message send box screen
+<SendMessageBoxScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            size_hint: (1, .1)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Contact'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'screen3'
+            Button:
+                size_hint: (.6, 1)
+                text: 'Chatting With ' + root.contact_name
+                color: (0, 1, 1, .8)
+            Button:
+                size_hint: (.2, 1)
+                text: 'List'
+        BoxLayout:
+            size_hint: (1, .1)
+            TextInput:
+                id: ti_message
+                size_hint: (.8, 1)
+                text: 'send message'
+                font_size: 48
+            Button:
+                size_hint: (.2, 1)
+                text: 'Send'
+                on_press: root.send_message()
+        ScrollView:
+            id: scrlv
+            size_hint: (1, .8)
+            BoxLayout:
+                id: msg_list
+                orientation: 'vertical'
+                size_hint: 1, None
+                height: max(root.msg_height, scrlv.height)
+                canvas:
+                    Color:
+                        rgba: (1, 1, 1, .8)
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+
+
+<MessageLayout>:
+    size_hint: (1, None)
+    height: 500
+    orientation: 'vertical'
+    Button:
+        id: btn_sender
+        text: 'Sender: ' + root.m_sender
+        size_hint: (1, None)
+        height: 80
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_size: root.default_size
+    Button:
+        id: btn_receiver
+        text: 'Receiver: ' + root.m_receiver
+        size_hint: (1, None)
+        height: 80
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_size: root.default_size
+    TextInput:
+        size_hint: 1, None
+        height: (len(self._lines)+1) * self.line_height
+        id: btn_content
+        height: 240
+        text: root.m_content
+        font_size: root.default_size
+        readonly: True
+    Button:
+        id: btn_time
+        text: '@' + root.m_time
+        size_hint: (1, None)
+        height: 80
+        text_size: self.size
+        halign: 'left'
+        valign: 'middle'
+        font_size: root.default_size
+    Label:
+        size_hint: (1, None)
+        height: 20
+        text: ''
 

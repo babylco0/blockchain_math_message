@@ -26,6 +26,7 @@ import base64
 from kivy.utils import platform
 from util import *
 from secp256k1 import PrivateKey, PublicKey
+import os
 
 demo_user_names = ('Alice', 'Bob', 'Charlie', 'Mark', 'King', 'Wu', 'Paige')
 Builder.load_file('main.kv')  # load *.kv file
@@ -180,6 +181,12 @@ class SendMessageBoxScreen(Screen):
             except Exception as e:
                 print(str(e))
 
+    def show_all_message(self):
+        """show all messages"""
+        message_list_screen.on_show()
+        sm.transition.direction = 'left'
+        sm.current = 'screen5'
+
 
 def create_message(sender, receiver, content):
     """create message"""""
@@ -219,23 +226,36 @@ class MessageLayout(BoxLayout):
     m_sign = StringProperty()
     m_pubkey = StringProperty()
 
-    def __init__(self, sender=None, receiver=None, content=None, t=None, sign=None, pubkey=None, **kwargs):
+    def __init__(self, data=None, sender=None, receiver=None, content=None, t=None, sign=None, pubkey=None, **kwargs):
         super(MessageLayout, self).__init__(**kwargs)
-        self.m_sender = sender
-        self.m_receiver = receiver
-        self.m_time = t
-        self.m_content = content
-        self.m_sign = sign
-        self.m_pubkey = pubkey
+        if data is not None:
+            self.m_sender = data['sender']
+            self.m_receiver = data['receiver']
+            self.m_content = data['content']
+            self.m_sign = data['sign']
+            self.m_pubkey = data['pubkey']
+            self.m_time = data['time']
+        if sender is not None:
+            self.m_sender = sender
+        if receiver is not None:
+            self.m_receiver = receiver
+        if t is not None:
+            self.m_time = t
+        if content is not None:
+            self.m_content = content
+        if sign is not None:
+            self.m_sign = sign
+        if pubkey is not None:
+            self.m_pubkey = pubkey
 
     def serialize(self):
         """serialize message"""
-        data = [{'sender': self.m_sender,
+        data = {'sender': self.m_sender,
                  'receiver': self.m_receiver,
                  'content': self.m_content,
                  'sign': self.m_sign,
                  'pubkey': self.m_pubkey,
-                 'time': self.m_time}]
+                 'time': self.m_time}
         return json.dumps(data)
 
     def hash(self):
@@ -253,15 +273,52 @@ class MessageShow(TextInput):
         self.size_hint = (1, None)
 
 
+class MessageListScreen(Screen):
+    """message list screen"""
+    msg_height = 0
+
+    def on_show(self):
+        self.ids['msg_list'].clear_widgets()
+        try:
+            store = JsonStore(message_path)
+            if not store.exists('TOP'):
+                return
+            else:
+                top_hash = store.get('TOP')['hash']
+                msg = MessageLayout(data=json.loads(store.get(top_hash)['message']))
+                self.msg_height += msg.height
+                self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
+                self.ids['msg_list'].add_widget(msg)
+                next_hash = store.get(top_hash)['next']
+                while next_hash != '0':
+                    msg = MessageLayout(data=json.loads(store.get(next_hash)['message']))
+                    self.msg_height += msg.height
+                    self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
+                    self.ids['msg_list'].add_widget(msg)
+                    next_hash = store.get(next_hash)['next']
+        except Exception as e:
+            print(str(e))
+
+    def delete_messages(self):
+        """delete message file"""
+        self.ids['msg_list'].clear_widgets()
+        try:
+            os.remove(message_path)
+        except Exception as e:
+            print(str(e))
+
+
 sm = ScreenManager()  # screen manager
 demo_user_sel_screen = DemoUserSelScreen(name='screen1')
 user_card_screen = UserCardScreen(name='screen2')
 contact_screen = ContactScreen(name='screen3')
 send_message_screen = SendMessageBoxScreen(name='screen4')
+message_list_screen = MessageListScreen(name='screen5')
 sm.add_widget(demo_user_sel_screen)
 sm.add_widget(user_card_screen)
 sm.add_widget(contact_screen)
 sm.add_widget(send_message_screen)
+sm.add_widget(message_list_screen)
 sm.current = 'screen1'
 
 

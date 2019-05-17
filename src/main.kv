@@ -239,6 +239,9 @@
             Button:
                 size_hint: (.2, 1)
                 text: 'List'
+                on_press: root.show_all_message()
+                    # root.manager.transition.direction = 'left'
+                    # root.manager.current = 'screen5'
         BoxLayout:
             size_hint: (1, .1)
             TextInput:
@@ -310,3 +313,32 @@
         height: 20
         text: ''
 
+# message list screen
+<MessageListScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        spacing: 10
+        BoxLayout:
+            size_hint: (1, .1)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Contact'
+                on_press:
+                    root.manager.transition.direction = 'right'
+                    root.manager.current = 'screen3'
+            Button:
+                id: l_contact
+                size_hint: (.6, 1)
+                text: 'All Messages'
+                color: (0, 1, 1, .8)
+            Button:
+                size_hint: (.2, 1)
+                text: 'Delete'
+                on_press: root.delete_messages()
+        ScrollView:
+            id: scrlv
+            size_hint: (1, .9)
+            BoxLayout:
+                id: msg_list
+                orientation: 'vertical'
+                size_hint: 1, None

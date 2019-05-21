@@ -19,6 +19,7 @@ from urllib import parse
 import json
 from Crypto.Hash import SHA256, RIPEMD
 from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto import Random
 import binascii
@@ -32,6 +33,18 @@ demo_user_names = ('Alice', 'Bob', 'Charlie', 'Mark', 'King', 'Wu', 'Paige')
 Builder.load_file('main.kv')  # load *.kv file
 default_path = './demo_users.json'
 message_path = './messages.json'
+block_height = 0
+
+# read block info
+try:
+    init_store = JsonStore(message_path)
+    if not init_store.exists('block'):  # initialize block info
+        init_store.put('block', height=0)
+    else:
+        block_height = init_store.get('block')['height']
+    # print(block_height)
+except Exception as e:
+    print(str(e))
 
 
 class DemoUserSelScreen(Screen):
@@ -158,7 +171,7 @@ class SendMessageBoxScreen(Screen):
     contact_address = StringProperty()
     contact_pubkey = StringProperty()
     msg_height = 0
-
+    
     def send_message(self):
         """send message"""
         if self.ids['ti_message'].text is None:
@@ -170,18 +183,17 @@ class SendMessageBoxScreen(Screen):
             self.ids['msg_list'].add_widget(msg)
             try:
                 store = JsonStore(message_path)
-                if not store.exists(msg.hash()):
-                    if not store.exists('TOP'):
-                        store.put(msg.hash(), message=msg.serialize(), next='0')
-                        store.put('TOP', hash=msg.hash())
-                    else:
-                        top_hash = store.get('TOP')['hash']
-                        store.put(msg.hash(), message=msg.serialize(), next=top_hash)
-                        store.put('TOP', hash=msg.hash())
+                if not store.exists(msg.hash()):  # store message if not exist
+                    global block_height
+                    store[block_height] = {'hash': msg.hash()}
+                    block_height += 1
+                    store['block'] = {'height': block_height}
+                    store[msg.hash()] = {'message': msg.serialize()}
             except Exception as e:
                 print(str(e))
 
-    def show_all_message(self):
+    @staticmethod
+    def show_all_message():
         """show all messages"""
         message_list_screen.on_show()
         sm.transition.direction = 'left'
@@ -196,11 +208,12 @@ def create_message(sender, receiver, content):
         sender_ecc_prikey = store.get(sender)['ecc_prikey']
         sender_ecc_pubkey = store.get(sender)['ecc_pubkey']
         receiver_address = store.get(receiver)['address']
-        receiver_rsa_pubkey = store.get(sender)['rsa_prikey']
+        receiver_rsa_pubkey = store.get(receiver)['rsa_pubkey']
         # use receiver's rsa pubkey encrypt content
+        h = SHA.new(content.encode('utf-8'))
         key = RSA.importKey(receiver_rsa_pubkey)
         cipher = PKCS1_v1_5.new(key)
-        encrypt = cipher.encrypt(content.encode('utf-8'))
+        encrypt = cipher.encrypt(content.encode('utf-8') + h.digest())
         encrypted_content = binascii.hexlify(encrypt).decode('utf-8')
         # sign message use sender's ecc prikey
         ecc_prikey = PrivateKey(bytes(bytearray.fromhex(sender_ecc_prikey)))
@@ -251,11 +264,11 @@ class MessageLayout(BoxLayout):
     def serialize(self):
         """serialize message"""
         data = {'sender': self.m_sender,
-                 'receiver': self.m_receiver,
-                 'content': self.m_content,
-                 'sign': self.m_sign,
-                 'pubkey': self.m_pubkey,
-                 'time': self.m_time}
+                'receiver': self.m_receiver,
+                'content': self.m_content,
+                'sign': self.m_sign,
+                'pubkey': self.m_pubkey,
+                'time': self.m_time}
         return json.dumps(data)
 
     def hash(self):
@@ -279,23 +292,60 @@ class MessageListScreen(Screen):
 
     def on_show(self):
         self.ids['msg_list'].clear_widgets()
+        self.msg_height = 0
         try:
             store = JsonStore(message_path)
-            if not store.exists('TOP'):
-                return
-            else:
-                top_hash = store.get('TOP')['hash']
-                msg = MessageLayout(data=json.loads(store.get(top_hash)['message']))
+            b_height = store.get('block')['height']
+            while b_height > 0:
+                msg_hash = store[str(b_height - 1)]['hash']
+                msg_data = store[msg_hash]['message']
+                msg = MessageLayout(data=json.loads(msg_data))
                 self.msg_height += msg.height
                 self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
                 self.ids['msg_list'].add_widget(msg)
-                next_hash = store.get(top_hash)['next']
-                while next_hash != '0':
-                    msg = MessageLayout(data=json.loads(store.get(next_hash)['message']))
+                b_height -= 1
+        except Exception as e:
+            print(str(e))
+
+    def show_mine(self):
+        """show mine messages"""
+        self.ids['msg_list'].clear_widgets()
+        self.msg_height = 0
+        my_name = user_card_screen.user_name
+        try:
+            user_store = JsonStore(default_path)
+            my_address = user_store.get(my_name)['address']
+            my_rsa_prikey = user_store.get(my_name)['rsa_prikey']
+            my_rsa_pubkey = user_store.get(my_name)['rsa_pubkey']
+        except Exception as e:
+            print(str(e))
+            return
+        try:
+            store = JsonStore(message_path)
+            b_height = store.get('block')['height']
+            while b_height > 0:
+                msg_hash = store[str(b_height - 1)]['hash']
+                msg_data = json.loads(store[msg_hash]['message'])
+                if msg_data['receiver'] == my_address:
+                    # verify sign
+                    if verify_sign(msg_data['content'], msg_data['pubkey'], msg_data['sender'], msg_data['sign']):
+                        # decrypt message
+                        ciphertext = binascii.unhexlify(msg_data['content'])
+                        key = RSA.importKey(my_rsa_prikey)
+                        dsize = SHA.digest_size
+                        sentinel = Random.new().read(15 + dsize)  # Let's assume that average data length is 15
+                        cipher = PKCS1_v1_5.new(key)
+                        message = cipher.decrypt(ciphertext, sentinel)
+                        digest = SHA.new(message[:-dsize]).digest()
+                        if digest == message[-dsize:]:
+                            msg_data['content'] = message[:-dsize].decode('utf-8')
+                        else:
+                            msg_data['content'] = 'Message is error'
+                    msg = MessageLayout(data=msg_data)
                     self.msg_height += msg.height
                     self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
                     self.ids['msg_list'].add_widget(msg)
-                    next_hash = store.get(next_hash)['next']
+                b_height -= 1
         except Exception as e:
             print(str(e))
 
@@ -306,6 +356,29 @@ class MessageListScreen(Screen):
             os.remove(message_path)
         except Exception as e:
             print(str(e))
+
+    def switch_message_mode(self):
+        """switch message mode all/mine"""
+        if self.ids['btn_msg_mode'].text == 'All Messages':
+            self.show_mine()
+            self.ids['btn_msg_mode'].text = 'Mine Messages'
+        else:
+            self.on_show()
+            self.ids['btn_msg_mode'].text = 'All Messages'
+
+
+def verify_sign(message, pubkey, address, sign):
+    """verify message sign"""
+    # verify public key
+    if address != pubkey2address(pubkey):
+        return False
+    # verify sign
+    ecc_pubkey = PublicKey(bytes(bytearray.fromhex(pubkey)), raw=True)
+    # print(ecc_pubkey)
+    sign = ecc_pubkey.ecdsa_deserialize(binascii.unhexlify(sign))
+    verified = ecc_pubkey.ecdsa_verify(binascii.unhexlify(message), sign)
+    # print(verified)
+    return verified
 
 
 sm = ScreenManager()  # screen manager

@@ -327,10 +327,11 @@
                     root.manager.transition.direction = 'right'
                     root.manager.current = 'screen3'
             Button:
-                id: l_contact
+                id: btn_msg_mode
                 size_hint: (.6, 1)
                 text: 'All Messages'
                 color: (0, 1, 1, .8)
+                on_press: root.switch_message_mode()
             Button:
                 size_hint: (.2, 1)
                 text: 'Delete'

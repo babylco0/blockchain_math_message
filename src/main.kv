@@ -147,6 +147,23 @@
             TabbedPanelItem:
                 text: 'Conf'
                 BoxLayout:
+                    orientation: 'vertical'
+                    BoxLayout:
+                        size_hint: (1, .1)
+                        Button:
+                            size_hint: (.2, 1)
+                            text: 'Url:'
+                        TextInput:
+                            id: ti_url
+                            size_hint: (.6, 1)
+                            text: 'http://babylco0-001-site1.site4future.com/message/'
+                            multiline: False
+                        Button:
+                            id: btn_test
+                            size_hint: (.2, 1)
+                            text: 'Test'
+                            on_press: root.test_connection()
+
                     BoxLayout:
                         size_hint: (1, .1)
                         Button:
@@ -160,6 +177,18 @@
                             size_hint: (.2, 1)
                             text: '-'
                             on_press: root.font_size = root.font_size - 2
+                    BoxLayout:
+                        size_hint: (1, .1)
+                        Button:
+                            text: 'Post'
+                            size_hint: (.2, 1)
+                            on_press: root.test_post()
+                        TextInput:
+                            id: ti_post
+                            size_hint: (.8, 1)
+                            text: 'post return'
+                    BoxLayout:
+                        size_hint: (1, .8)
 
 # contact screen
 <ContactScreen>:

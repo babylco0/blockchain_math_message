@@ -79,6 +79,39 @@ class UserCardScreen(Screen):
         except Exception as e:
             print(str(e))
 
+    def test_connection(self):
+        """test connection"""
+        url = self.ids['ti_url'].text + 'test.php'
+        req = UrlRequest(url=url, on_success=self.request_success)
+
+    def test_post(self):
+        """test post"""
+        try:
+            store = JsonStore(message_path)
+            msg_hash = store['2']['hash']
+            msg_data = store[msg_hash]['message']
+
+            data = json.loads(msg_data)
+            data['hash'] = msg_hash
+            params = parse.urlencode(data)
+            url = self.ids['ti_url'].text + 'post.php' + '?' + params
+            print(url)
+            req = UrlRequest(url=url, on_success=self.request_success,
+                             on_failure=self.request_failure,
+                             on_error=self.request_failure)
+        except Exception as e:
+            print(str(e))
+
+    def request_success(self, req, values):
+        """request success"""
+        if values == 'OK':
+            self.ids['btn_test'].text = 'OK'
+        print(values)
+
+    def request_failure(self, req, result):
+        """request fail"""
+        print(result)
+
 
 class DemoUserSelView(ScrollView):
     """demo user select view"""
@@ -191,6 +224,10 @@ class SendMessageBoxScreen(Screen):
                     store[msg.hash()] = {'message': msg.serialize()}
             except Exception as e:
                 print(str(e))
+
+    def post_message(self, msg_hash, msg_data):
+        """post message to server"""
+        pass
 
     @staticmethod
     def show_all_message():

@@ -177,18 +177,28 @@
                             size_hint: (.2, 1)
                             text: '-'
                             on_press: root.font_size = root.font_size - 2
+#                    BoxLayout:
+#                        size_hint: (1, .1)
+#                        Button:
+#                            text: 'Post'
+#                            size_hint: (.2, 1)
+#                            on_press: root.test_post()
+#                        TextInput:
+#                            id: ti_post
+#                            size_hint: (.8, 1)
+#                            text: 'post return'
                     BoxLayout:
                         size_hint: (1, .1)
                         Button:
-                            text: 'Post'
+                            text: 'Sync.'
                             size_hint: (.2, 1)
-                            on_press: root.test_post()
+                            on_press: root.test_get_height()
                         TextInput:
-                            id: ti_post
+                            id: ti_height
                             size_hint: (.8, 1)
                             text: 'post return'
                     BoxLayout:
-                        size_hint: (1, .8)
+                        size_hint: (1, .7)
 
 # contact screen
 <ContactScreen>:
@@ -284,7 +294,7 @@
                 on_press: root.send_message()
         ScrollView:
             id: scrlv
-            size_hint: (1, .8)
+            size_hint: (1, .7)
             BoxLayout:
                 id: msg_list
                 orientation: 'vertical'
@@ -296,6 +306,11 @@
                     Rectangle:
                         pos: self.pos
                         size: self.size
+        Button:
+            size_hint: (1, .1)
+            id: btn_status
+            text: 'send status'
+            font_size: 24
 
 
 <MessageLayout>:
@@ -363,7 +378,7 @@
                 on_press: root.switch_message_mode()
             Button:
                 size_hint: (.2, 1)
-                text: 'Delete'
+                text: 'Sync.'
                 on_press: root.delete_messages()
         ScrollView:
             id: scrlv
@@ -372,3 +387,4 @@
                 id: msg_list
                 orientation: 'vertical'
                 size_hint: 1, None
+

@@ -34,6 +34,8 @@ Builder.load_file('main.kv')  # load *.kv file
 default_path = './demo_users.json'
 message_path = './messages.json'
 block_height = 0
+message_hash = set()
+contact_map = {}
 
 # read block info
 try:
@@ -42,7 +44,10 @@ try:
         init_store.put('block', height=0)
     else:
         block_height = init_store.get('block')['height']
-    # print(block_height)
+        for i in range(0, block_height):
+            msg_hash = init_store[str(i)]['hash']
+            message_hash.add(msg_hash)
+    # print(message_hash)
 except Exception as e:
     print(str(e))
 
@@ -50,6 +55,26 @@ except Exception as e:
 class DemoUserSelScreen(Screen):
     """select demo user screen"""
     pass
+
+
+def add_new_message(req, values):
+    """get new message"""
+    dat = (json.loads(values))
+
+    msg = MessageLayout(data=json.loads(dat))
+
+    if msg is not None:
+        try:
+            store = JsonStore(message_path)
+            if not store.exists(msg.hash()):  # store message if not exist
+                global block_height
+                store[block_height] = {'hash': msg.hash()}
+                block_height += 1
+                store['block'] = {'height': block_height}
+                store[msg.hash()] = {'message': msg.serialize()}
+            message_hash.add(msg.hash())
+        except Exception as e:
+            print(str(e))
 
 
 class UserCardScreen(Screen):
@@ -95,18 +120,33 @@ class UserCardScreen(Screen):
             data['hash'] = msg_hash
             params = parse.urlencode(data)
             url = self.ids['ti_url'].text + 'post.php' + '?' + params
-            print(url)
+            # print(url)
             req = UrlRequest(url=url, on_success=self.request_success,
                              on_failure=self.request_failure,
                              on_error=self.request_failure)
         except Exception as e:
             print(str(e))
 
+    def test_get_height(self):
+        """get height"""
+        url = self.ids['ti_url'].text + 'height.php'
+        # print(url)
+        req = UrlRequest(url=url, on_success=self.get_height_success)
+
+    def get_height_success(self, req, values):
+        """get height success"""
+        all_hash = json.loads(values)
+        for h in all_hash:
+            if h not in message_hash:
+                url = self.ids['ti_url'].text + 'get_hash.php' + '?hash=' + h
+                req = UrlRequest(url=url, on_success=add_new_message)
+        self.ids['ti_height'].text = str(len(all_hash))
+
     def request_success(self, req, values):
         """request success"""
         if values == 'OK':
             self.ids['btn_test'].text = 'OK'
-        print(values)
+        # print(values)
 
     def request_failure(self, req, result):
         """request fail"""
@@ -192,6 +232,7 @@ class ContactView(ScrollView):
                                   uaddress=store.get(name)['address'],
                                   upubkey=store.get(name)['rsa_pubkey'])
                 layout.add_widget(c)
+                contact_map[store.get(name)['address']] = name
             except Exception as e:
                 print(str(e))
         self.size_hint = (1, 1)
@@ -212,8 +253,19 @@ class SendMessageBoxScreen(Screen):
         else:
             msg = create_message(user_card_screen.user_name, self.contact_name, self.ids['ti_message'].text)
             self.msg_height += msg.height
-            self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
+            self.ids['msg_list'].height = max(self.msg_height, self.height / 10 * 7)
             self.ids['msg_list'].add_widget(msg)
+
+            # send to server
+            data = json.loads(msg.serialize())
+            data['hash'] = msg.hash()
+            params = parse.urlencode(data)
+            url = user_card_screen.ids['ti_url'].text + 'post.php' + '?' + params
+            # print(url)
+            req = UrlRequest(url=url, on_success=self.send_success,
+                             on_failure=self.send_failure,
+                             on_error=self.send_failure)
+            # store in local
             try:
                 store = JsonStore(message_path)
                 if not store.exists(msg.hash()):  # store message if not exist
@@ -224,6 +276,14 @@ class SendMessageBoxScreen(Screen):
                     store[msg.hash()] = {'message': msg.serialize()}
             except Exception as e:
                 print(str(e))
+
+    def send_success(self, req, values):
+        """send to server success"""
+        self.ids['btn_status'].text = 'Send < ' + str(values) + ' > OK'
+
+    def send_failure(self, req, values):
+        """send to server error"""
+        self.ids['btn_status'].text = 'Failed: ' + str(values)
 
     def post_message(self, msg_hash, msg_data):
         """post message to server"""
@@ -353,7 +413,6 @@ class MessageListScreen(Screen):
             user_store = JsonStore(default_path)
             my_address = user_store.get(my_name)['address']
             my_rsa_prikey = user_store.get(my_name)['rsa_prikey']
-            my_rsa_pubkey = user_store.get(my_name)['rsa_pubkey']
         except Exception as e:
             print(str(e))
             return
@@ -378,6 +437,8 @@ class MessageListScreen(Screen):
                             msg_data['content'] = message[:-dsize].decode('utf-8')
                         else:
                             msg_data['content'] = 'Message is error'
+                    msg_data['sender'] = contact_map[msg_data['sender']]
+                    msg_data['receiver'] = my_name
                     msg = MessageLayout(data=msg_data)
                     self.msg_height += msg.height
                     self.ids['msg_list'].height = max(self.msg_height, self.height / 5 * 4)
@@ -388,11 +449,27 @@ class MessageListScreen(Screen):
 
     def delete_messages(self):
         """delete message file"""
+        """ Sync messages"""
+        # get all hash in server
+        url = user_card_screen.ids['ti_url'].text + 'height.php'
+        # print(url)
+        req = UrlRequest(url=url, on_success=self.get_all_hash_success)
+
+        '''
         self.ids['msg_list'].clear_widgets()
         try:
             os.remove(message_path)
         except Exception as e:
             print(str(e))
+        '''
+    def get_all_hash_success(self, req, values):
+        """get height success"""
+        all_hash = json.loads(values)
+        for h in all_hash:
+            if h not in message_hash:
+                url = user_card_screen.ids['ti_url'].text + 'get_hash.php' + '?hash=' + h
+                req = UrlRequest(url=url, on_success=add_new_message)
+        self.on_show()
 
     def switch_message_mode(self):
         """switch message mode all/mine"""
